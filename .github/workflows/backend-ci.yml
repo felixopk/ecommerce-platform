@@ -1,63 +1,59 @@
-name: Backend CI/CD
+name: Backend Release (Tag → Build → Scan → Deploy)
 
 on:
   push:
-    branches: ["main"]
-    paths:
-      - "backend/**"
+    tags:
+      - "v*.*.*"     # triggers only when you push a version tag like v1.5.2
+
+permissions:
+  contents: write
+  packages: write
 
 jobs:
-  build-test-secure:
+  build-scan-push-deploy:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
+    - name: Checkout Repo
+      uses: actions/checkout@v4
 
-    - name: Install Node dependencies
-      working-directory: backend
-      run: npm install --force
-
-    - name: Run Lint (Static Code Analysis)
-      working-directory: backend
-      run: npm run lint || echo "⚠️ Lint issues found, fix later"
-
-    - name: Dependency Vulnerability Scan (npm audit)
-      working-directory: backend
-      run: npm audit --omit=dev || echo "⚠️ npm audit warnings"
-
-    - name: Login to GHCR
-      uses: docker/login-action@v2
-      with:
-        registry: ghcr.io
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
+    - name: Extract version from tag
+      id: version
+      run: |
+        VERSION=${GITHUB_REF#refs/tags/}
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Release Version = $VERSION"
 
     - name: Build Docker image
       run: |
-        docker build -t ghcr.io/${{ github.repository_owner }}/ecommerce-backend:latest ./backend
+        docker build -t ghcr.io/felixopk/ecommerce-backend:${{ steps.version.outputs.version }} backend
 
-    - name: Trivy Image Scan (Fail on High/Critical vulns)
+    - name: Login to GHCR
+      run: |
+        echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+    - name: Configure Kubeconfig
+      run: |
+        echo "${{ secrets.KUBECONFIG_HOMELAB }}" | base64 -d > $HOME/.kube/config
+        kubectl config use-context homelab || true
+
+
+    - name: Push Image to GHCR
+      run: |
+        docker push ghcr.io/felixopk/ecommerce-backend:${{ steps.version.outputs.version }}
+
+    - name: Security Scan with Trivy
       uses: aquasecurity/trivy-action@master
       with:
-        image-ref: ghcr.io/${{ github.repository_owner }}/ecommerce-backend:latest
-        format: 'table'
-        exit-code: '1'
-        severity: 'HIGH,CRITICAL'
+        image-ref: ghcr.io/felixopk/ecommerce-backend:${{ steps.version.outputs.version }}
+        severity: HIGH,CRITICAL
+        format: table
+        scan-type: image
+        exit-code: 1
 
-    - name: Push image to GHCR (only if scan passed)
-      if: success()
+    - name: Update Kubernetes Deployment Image Tag
       run: |
-        docker push ghcr.io/${{ github.repository_owner }}/ecommerce-backend:latest
+        sed -i "s#ghcr.io/felixopk/ecommerce-backend:.*#ghcr.io/felixopk/ecommerce-backend:${{ steps.version.outputs.version }}#g" kubernetes/backend-deployment.yaml
 
-    - name: Deploy to Homelab via SSH
-      if: success()
-      uses: appleboy/ssh-action@v1.0.3
-      with:
-        host: ${{ secrets.HOMELAB_SERVER }}
-        username: ${{ secrets.HOMELAB_USER }}
-        password: ${{ secrets.HOMELAB_PASS }}
-        script: |
-          cd ~/ecommerce-platform/kubernetes
-          kubectl set image deployment/ecommerce-backend ecommerce-backend=ghcr.io/${{ github.repository_owner }}/ecommerce-backend:latest -n ecommerce
-          kubectl rollout status deployment/ecommerce-backend -n ecommerce --timeout=60s
+    - name: Apply Deployment to Cluster
+      run: |
+        kubectl apply -f kubernetes/backend-deployment.yaml
