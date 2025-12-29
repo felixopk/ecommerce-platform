@@ -1,6 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  namespace: ecommerce
   name: ecommerce-frontend
   labels:
     app: ecommerce-frontend
@@ -16,7 +17,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: ghcr.io/felixopk/ecommerce-frontend:v1.4
+          image: ghcr.io/felixopk/ecommerce-frontend:v1.6.1
           imagePullPolicy: Always
           ports:
             - containerPort: 80
