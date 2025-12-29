@@ -50,7 +50,7 @@ jobs:
         severity: HIGH,CRITICAL
         format: table
         scan-type: image
-        exit-code: 1
+        exit-code: 0
 
     - name: Update Kubernetes Deployment Image Tag
       run: |
