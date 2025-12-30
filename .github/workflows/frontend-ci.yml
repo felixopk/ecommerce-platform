@@ -1,9 +1,9 @@
-name: Backend Release (Tag → Build → Scan → Deploy)
+name: Frontend Release (Tag → Build → Scan → Deploy)
 
 on:
   push:
     tags:
-      - "v*.*.*"
+      - "frontend-v*.*.*"  # Triggers on tags like frontend-v1.0.0
 
 permissions:
   contents: write
@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   build-scan-push-deploy:
-    runs-on: self-hosted  # ✅ CHANGED: Use homelab runner
+    runs-on: self-hosted
     
     steps:
     - name: Checkout Repo
@@ -20,13 +20,13 @@ jobs:
     - name: Extract version from tag
       id: version
       run: |
-        VERSION=${GITHUB_REF#refs/tags/}
+        VERSION=${GITHUB_REF#refs/tags/frontend-}
         echo "version=$VERSION" >> $GITHUB_OUTPUT
         echo "Release Version = $VERSION"
     
     - name: Build Docker image
       run: |
-        docker build -t ghcr.io/felixopk/ecommerce-backend:${{ steps.version.outputs.version }} backend
+        docker build -t ghcr.io/felixopk/ecommerce-frontend:${{ steps.version.outputs.version }} frontend/ecommerce-frontend
     
     - name: Login to GHCR
       run: |
@@ -34,7 +34,7 @@ jobs:
     
     - name: Push Image to GHCR
       run: |
-        docker push ghcr.io/felixopk/ecommerce-backend:${{ steps.version.outputs.version }}
+        docker push ghcr.io/felixopk/ecommerce-frontend:${{ steps.version.outputs.version }}
     
     - name: Security Scan with Trivy
       run: |
@@ -43,19 +43,20 @@ jobs:
           --severity HIGH,CRITICAL \
           --format table \
           --exit-code 0 \
-          ghcr.io/felixopk/ecommerce-backend:${{ steps.version.outputs.version }}
+          ghcr.io/felixopk/ecommerce-frontend:${{ steps.version.outputs.version }}
     
     - name: Update Kubernetes Deployment Image Tag
       run: |
-        sed -i "s#ghcr.io/felixopk/ecommerce-backend:.*#ghcr.io/felixopk/ecommerce-backend:${{ steps.version.outputs.version }}#g" kubernetes/backend-deployment.yaml
+        sed -i "s#ghcr.io/felixopk/ecommerce-frontend:.*#ghcr.io/felixopk/ecommerce-frontend:${{ steps.version.outputs.version }}#g" kubernetes/frontend-deployment.yaml
+    
     - name: Commit Updated Manifest
       run: |
         git config --global user.name "github-actions[bot]"
         git config --global user.email "github-actions[bot]@users.noreply.github.com"
-        git add kubernetes/backend-deployment.yaml
-        git commit -m "chore: update backend image to ${{ steps.version.outputs.version }}" || echo "No changes"
+        git add kubernetes/frontend-deployment.yaml
+        git commit -m "chore: update frontend image to ${{ steps.version.outputs.version }}" || echo "No changes"
         git push
-        
+    
     - name: Apply Deployment to Cluster
       run: |
-        kubectl apply -f kubernetes/backend-deployment.yaml
+        kubectl apply -f kubernetes/frontend-deployment.yaml
