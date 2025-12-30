@@ -48,6 +48,7 @@ jobs:
     - name: Update Kubernetes Deployment Image Tag
       run: |
         sed -i "s#ghcr.io/felixopk/ecommerce-backend:.*#ghcr.io/felixopk/ecommerce-backend:${{ steps.version.outputs.version }}#g" kubernetes/backend-deployment.yaml
+        
     - name: Commit Updated Manifest
       run: |
         git config --global user.name "github-actions[bot]"
@@ -55,7 +56,7 @@ jobs:
         git add kubernetes/backend-deployment.yaml
         git commit -m "chore: update backend image to ${{ steps.version.outputs.version }}" || echo "No changes"
         git push
-        
+
     - name: Apply Deployment to Cluster
       run: |
         kubectl apply -f kubernetes/backend-deployment.yaml
