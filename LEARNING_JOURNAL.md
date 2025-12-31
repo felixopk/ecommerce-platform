@@ -1,6 +1,6 @@
 # DevOps Learning Journey
 
-## December 28-31, 2025: Kubernetes Homelab Setup
+## December 24-31, 2025: Kubernetes Homelab Setup
 
 ### Day 1: Foundation
 **Objective:** Set up production k3s cluster on dedicated hardware
