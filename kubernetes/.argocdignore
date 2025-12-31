@@ -1,0 +1,8 @@
+# Ignore Kind-specific config
+ecommerce-kind-config.yaml
+
+# Ignore secrets (should be managed separately)
+postgres-secret.yaml
+
+# Ignore storage class (already in cluster)
+storageclass-standard.yaml
