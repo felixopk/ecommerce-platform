@@ -318,3 +318,77 @@ MIT License - See [LICENSE](LICENSE) file
 ---
 
 *Last Updated: December 30, 2025*
+
+## Production-Grade Networking with MetalLB
+
+### Architecture
+
+This project demonstrates production-ready Kubernetes networking on bare-metal infrastructure:
+```
+Internet/Users
+    ↓
+MetalLB LoadBalancer (192.168.0.100)
+    ↓
+Nginx Ingress Controller
+    ↓
+┌─────────────┬──────────────┬─────────────┐
+│  Frontend   │   Backend    │  PostgreSQL │
+│  (Nginx)    │  (NestJS)    │  (StatefulSet)
+└─────────────┴──────────────┴─────────────┘
+```
+
+### Why MetalLB?
+
+**Problem**: Kubernetes LoadBalancer services require cloud providers (AWS, GCP, Azure). On bare-metal, LoadBalancer services remain in "Pending" state forever.
+
+**Solution**: MetalLB provides network load balancer implementation for bare-metal Kubernetes clusters.
+
+**Benefits**:
+- ✅ Standard ports (80, 443) instead of NodePort high-numbered ports
+- ✅ Production-grade load balancing
+- ✅ Proper IP address management
+- ✅ L2/L3 mode support
+- ✅ No cloud dependency
+
+### Technical Implementation
+
+**MetalLB Configuration**:
+- IP Pool: `192.168.0.100-192.168.0.110`
+- Mode: Layer 2 (ARP-based)
+- LoadBalancer IP: `192.168.0.100`
+
+**Access**:
+- Application: http://ecommerce.local/
+- API: http://ecommerce.local/api/products
+- Health: http://ecommerce.local/healthz
+
+### Interview Talking Points
+
+**Q: "Why use MetalLB instead of NodePort?"**
+
+NodePort has several production issues:
+1. Non-standard ports (30000-32767) confuse users and break bookmarks
+2. Increased attack surface (exposes ports on all nodes)
+3. No proper load balancing
+4. Limited port range (~2000 services max)
+5. Doesn't work with corporate firewalls
+
+MetalLB provides cloud-native LoadBalancer experience on-premises.
+
+**Q: "How does MetalLB work?"**
+
+MetalLB operates in two modes:
+- **Layer 2 mode** (used here): Uses ARP to announce IP addresses
+- **BGP mode**: Integrates with network routers for advanced routing
+
+In L2 mode, MetalLB responds to ARP requests for the LoadBalancer IP, directing traffic to the correct node.
+
+**Q: "What about production at scale?"**
+
+For multi-node production:
+- Use MetalLB in BGP mode with proper routers
+- Or integrate with existing F5/HAProxy infrastructure
+- Or use cloud-native load balancers (AWS ALB, GCP LB)
+
+The principles remain the same - this homelab demonstrates understanding of the architecture.
+
