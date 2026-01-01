@@ -1,0 +1,92 @@
+# Prometheus Operator Configuration
+prometheusOperator:
+  enabled: true
+
+# Prometheus Configuration
+prometheus:
+  enabled: true
+  
+  prometheusSpec:
+    # How long to keep metrics
+    retention: 30d
+    
+    # Storage for metrics
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 10Gi
+    
+    # Resource limits
+    resources:
+      requests:
+        cpu: 200m
+        memory: 512Mi
+      limits:
+        cpu: 1000m
+        memory: 2Gi
+    
+    # Automatically discover ServiceMonitors
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+
+# Grafana Configuration
+grafana:
+  enabled: true
+  
+  # Admin password (CHANGE THIS!)
+  adminPassword: "admin123"
+  
+  # Persistent storage for dashboards
+  persistence:
+    enabled: true
+    size: 5Gi
+  
+  # Resource limits
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 300m
+      memory: 512Mi
+
+# AlertManager Configuration
+alertmanager:
+  enabled: true
+  
+  alertmanagerSpec:
+    storage:
+      volumeClaimTemplate:
+        spec:
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 2Gi
+
+# Node Exporter - collects host metrics
+nodeExporter:
+  enabled: true
+
+# Kube State Metrics - K8s object metrics  
+kubeStateMetrics:
+  enabled: true
+
+# Default alerting rules
+defaultRules:
+  create: true
+  rules:
+    alertmanager: true
+    etcd: false  # k3s doesn't use etcd
+    general: true
+    k8s: true
+    kubeApiserver: true
+    kubePrometheusNodeRecording: true
+    kubernetesApps: true
+    kubernetesResources: true
+    kubernetesStorage: true
+    kubernetesSystem: true
+    node: true
+    prometheus: true
