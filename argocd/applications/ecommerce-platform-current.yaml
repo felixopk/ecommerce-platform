@@ -1,0 +1,195 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  creationTimestamp: "2025-12-31T01:46:29Z"
+  generation: 569
+  name: ecommerce-platform
+  namespace: argocd
+  resourceVersion: "149213"
+  uid: 0ffcc4f0-e63c-4928-bb4b-9e658ca8d9ca
+spec:
+  destination:
+    namespace: ecommerce
+    server: https://kubernetes.default.svc
+  project: default
+  source:
+    path: kubernetes
+    repoURL: https://github.com/felixopk/ecommerce-platform
+    targetRevision: HEAD
+  syncPolicy:
+    automated:
+      enabled: true
+      prune: true
+      selfHeal: true
+status:
+  controllerNamespace: argocd
+  health:
+    lastTransitionTime: "2025-12-31T17:40:37Z"
+    status: Healthy
+  history:
+  - deployStartedAt: "2025-12-31T05:40:09Z"
+    deployedAt: "2025-12-31T05:40:10Z"
+    id: 0
+    initiatedBy:
+      automated: true
+    revision: cf203a2e33bd77b003ae2a38f6340472b0d243cf
+    source:
+      path: kubernetes
+      repoURL: https://github.com/felixopk/ecommerce-platform
+      targetRevision: HEAD
+  operationState:
+    finishedAt: "2025-12-31T05:40:10Z"
+    message: successfully synced (all tasks run)
+    operation:
+      initiatedBy:
+        automated: true
+      retry:
+        limit: 5
+      sync:
+        prune: true
+        revision: cf203a2e33bd77b003ae2a38f6340472b0d243cf
+        source:
+          path: kubernetes
+          repoURL: https://github.com/felixopk/ecommerce-platform
+          targetRevision: HEAD
+    phase: Succeeded
+    startedAt: "2025-12-31T05:40:09Z"
+    syncResult:
+      resources:
+      - group: ""
+        hookPhase: Running
+        kind: Service
+        message: service/postgres configured
+        name: postgres
+        namespace: ecommerce
+        status: Synced
+        syncPhase: Sync
+        version: v1
+      - group: ""
+        hookPhase: Running
+        kind: Service
+        message: service/ecommerce-frontend configured
+        name: ecommerce-frontend
+        namespace: ecommerce
+        status: Synced
+        syncPhase: Sync
+        version: v1
+      - group: ""
+        hookPhase: Running
+        kind: Service
+        message: service/ecommerce-backend configured
+        name: ecommerce-backend
+        namespace: ecommerce
+        status: Synced
+        syncPhase: Sync
+        version: v1
+      - group: apps
+        hookPhase: Running
+        images:
+        - ghcr.io/felixopk/ecommerce-frontend:v1.6.1
+        kind: Deployment
+        message: deployment.apps/ecommerce-frontend configured
+        name: ecommerce-frontend
+        namespace: ecommerce
+        status: Synced
+        syncPhase: Sync
+        version: v1
+      - group: apps
+        hookPhase: Running
+        images:
+        - ghcr.io/felixopk/ecommerce-backend:v1.0.8
+        kind: Deployment
+        message: deployment.apps/ecommerce-backend configured
+        name: ecommerce-backend
+        namespace: ecommerce
+        status: Synced
+        syncPhase: Sync
+        version: v1
+      - group: apps
+        hookPhase: Running
+        images:
+        - postgres:15
+        kind: StatefulSet
+        message: statefulset.apps/postgres configured
+        name: postgres
+        namespace: ecommerce
+        status: Synced
+        syncPhase: Sync
+        version: v1
+      - group: networking.k8s.io
+        hookPhase: Running
+        kind: Ingress
+        message: ingress.networking.k8s.io/ecommerce-ingress configured
+        name: ecommerce-ingress
+        namespace: ecommerce
+        status: Synced
+        syncPhase: Sync
+        version: v1
+      revision: cf203a2e33bd77b003ae2a38f6340472b0d243cf
+      source:
+        path: kubernetes
+        repoURL: https://github.com/felixopk/ecommerce-platform
+        targetRevision: HEAD
+  reconciledAt: "2026-01-01T01:53:24Z"
+  resourceHealthSource: appTree
+  resources:
+  - kind: Service
+    name: ecommerce-backend
+    namespace: ecommerce
+    status: Synced
+    version: v1
+  - kind: Service
+    name: ecommerce-frontend
+    namespace: ecommerce
+    status: Synced
+    version: v1
+  - kind: Service
+    name: postgres
+    namespace: ecommerce
+    status: Synced
+    version: v1
+  - group: apps
+    kind: Deployment
+    name: ecommerce-backend
+    namespace: ecommerce
+    status: Synced
+    version: v1
+  - group: apps
+    kind: Deployment
+    name: ecommerce-frontend
+    namespace: ecommerce
+    status: Synced
+    version: v1
+  - group: apps
+    kind: StatefulSet
+    name: postgres
+    namespace: ecommerce
+    status: Synced
+    version: v1
+  - group: networking.k8s.io
+    kind: Ingress
+    name: ecommerce-ingress
+    namespace: ecommerce
+    status: Synced
+    version: v1
+  sourceHydrator: {}
+  sourceType: Directory
+  summary:
+    externalURLs:
+    - http://ecommerce.local/
+    - http://ecommerce.local/api
+    images:
+    - ghcr.io/felixopk/ecommerce-backend:v1.0.8
+    - ghcr.io/felixopk/ecommerce-frontend:v1.6.1
+    - postgres:15
+  sync:
+    comparedTo:
+      destination:
+        namespace: ecommerce
+        server: https://kubernetes.default.svc
+      source:
+        path: kubernetes
+        repoURL: https://github.com/felixopk/ecommerce-platform
+        targetRevision: HEAD
+    revision: 0724fb93824e5c345f0947b6d86fb00b33458b3c
+    status: Synced
