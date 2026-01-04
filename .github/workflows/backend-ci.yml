@@ -16,6 +16,8 @@ jobs:
     steps:
     - name: Checkout Repo
       uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}  # Needed for pushing back to repo
     
     - name: Extract version from tag
       id: version
@@ -45,8 +47,24 @@ jobs:
           --exit-code 0 \
           ghcr.io/felixopk/ecommerce-backend:${{ steps.version.outputs.version }}
     
-    - name: Update and Apply Deployment
+    - name: Update Kubernetes Manifest and Commit to Git (GitOps)
       run: |
+        # Update the image tag in the manifest
         sed -i "s#ghcr.io/felixopk/ecommerce-backend:.*#ghcr.io/felixopk/ecommerce-backend:${{ steps.version.outputs.version }}#g" kubernetes/backend-deployment.yaml
-        kubectl apply -f kubernetes/backend-deployment.yaml
-        echo "✅ Deployed backend:${{ steps.version.outputs.version }} to cluster"
+        
+        # Configure Git
+        git config user.name "GitHub Actions Bot"
+        git config user.email "actions@github.com"
+        
+        # Commit and push the change
+        git add kubernetes/backend-deployment.yaml
+        git commit -m "chore: update backend image to ${{ steps.version.outputs.version }}" || echo "No changes to commit"
+        git push origin main
+        
+        echo "✅ Updated manifest in Git - ArgoCD will deploy automatically"
+    
+    - name: Wait for ArgoCD to Sync (Optional)
+      run: |
+        echo "⏳ Waiting for ArgoCD to detect and deploy the change..."
+        echo "This typically takes 1-3 minutes (ArgoCD poll interval)"
+        echo "Monitor: kubectl get application ecommerce-platform -n argocd -w"
