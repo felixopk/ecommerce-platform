@@ -1,9 +1,9 @@
-name: Frontend Release (Tag → Build → Scan → Deploy)
+name: Backend Release (Tag → Build → Scan → Deploy)
 
 on:
   push:
     tags:
-      - "frontend-v*.*.*"
+      - "v*.*.*"
 
 permissions:
   contents: write
@@ -16,17 +16,21 @@ jobs:
     steps:
     - name: Checkout Repo
       uses: actions/checkout@v4
+      with:
+        ref: main  # ← IMPORTANT: Checkout main branch, not the tag
+        token: ${{ secrets.GITHUB_TOKEN }}
+        fetch-depth: 0  # Fetch all history so we can access tags
     
     - name: Extract version from tag
       id: version
       run: |
-        VERSION=${GITHUB_REF#refs/tags/frontend-}
+        VERSION=${GITHUB_REF#refs/tags/}
         echo "version=$VERSION" >> $GITHUB_OUTPUT
         echo "Release Version = $VERSION"
     
     - name: Build Docker image
       run: |
-        docker build -t ghcr.io/felixopk/ecommerce-frontend:${{ steps.version.outputs.version }} frontend/ecommerce-frontend
+        docker build -t ghcr.io/felixopk/ecommerce-backend:${{ steps.version.outputs.version }} backend
     
     - name: Login to GHCR
       run: |
@@ -34,7 +38,7 @@ jobs:
     
     - name: Push Image to GHCR
       run: |
-        docker push ghcr.io/felixopk/ecommerce-frontend:${{ steps.version.outputs.version }}
+        docker push ghcr.io/felixopk/ecommerce-backend:${{ steps.version.outputs.version }}
     
     - name: Security Scan with Trivy
       run: |
@@ -43,10 +47,24 @@ jobs:
           --severity HIGH,CRITICAL \
           --format table \
           --exit-code 0 \
-          ghcr.io/felixopk/ecommerce-frontend:${{ steps.version.outputs.version }}
+          ghcr.io/felixopk/ecommerce-backend:${{ steps.version.outputs.version }}
     
-    - name: Update and Apply Deployment
+    - name: Update Kubernetes Manifest and Commit to Git (GitOps)
       run: |
-        sed -i "s#ghcr.io/felixopk/ecommerce-frontend:.*#ghcr.io/felixopk/ecommerce-frontend:${{ steps.version.outputs.version }}#g" kubernetes/frontend-deployment.yaml
-        kubectl apply -f kubernetes/frontend-deployment.yaml
-        echo "✅ Deployed frontend:${{ steps.version.outputs.version }} to cluster"
+        # Update the image tag in the manifest
+        sed -i "s#ghcr.io/felixopk/ecommerce-backend:.*#ghcr.io/felixopk/ecommerce-backend:${{ steps.version.outputs.version }}#g" kubernetes/backend-deployment.yaml
+        
+        # Configure Git
+        git config user.name "GitHub Actions Bot"
+        git config user.email "actions@github.com"
+        
+        # Check if there are changes
+        if git diff --quiet kubernetes/backend-deployment.yaml; then
+          echo "No changes to manifest"
+        else
+          # Commit and push the change
+          git add kubernetes/backend-deployment.yaml
+          git commit -m "chore: update backend image to ${{ steps.version.outputs.version }}"
+          git push origin main
+          echo "✅ Updated manifest in Git - ArgoCD will deploy automatically"
+        fi
