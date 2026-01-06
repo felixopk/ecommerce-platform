@@ -607,3 +607,4 @@ I can now confidently discuss:
 *Last Updated: December 31, 2025, 8:00 PM*
 *Total Time Invested: ~28 hours*
 *Production-Ready Systems: GitOps ✅ | Networking ✅ | Monitoring ⏳*
+Debugged and resolved a CI/CD pipeline issue where frontend deployments were incorrectly tagged with backend image names. Used git revert to safely rollback changes, implemented GitOps best practices with automatic manifest commits, and established consistent tag-based release workflows for multiple microservices.
