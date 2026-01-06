@@ -3,7 +3,7 @@ name: Frontend Release (Tag → Build → Scan → Deploy)
 on:
   push:
     tags:
-      - "frontend-v*.*.*"
+      - "frontend-v*.*.*"  # Keep this - it's good for clarity
 
 permissions:
   contents: write
@@ -16,11 +16,15 @@ jobs:
     steps:
     - name: Checkout Repo
       uses: actions/checkout@v4
+      with:
+        ref: main  # ← ADD THIS: Fix detached HEAD issue
+        token: ${{ secrets.GITHUB_TOKEN }}
+        fetch-depth: 0
     
     - name: Extract version from tag
       id: version
       run: |
-        VERSION=${GITHUB_REF#refs/tags/frontend-}
+        VERSION=${GITHUB_REF#refs/tags/frontend-v}  # ← Changed to remove "frontend-v"
         echo "version=$VERSION" >> $GITHUB_OUTPUT
         echo "Release Version = $VERSION"
     
@@ -45,8 +49,22 @@ jobs:
           --exit-code 0 \
           ghcr.io/felixopk/ecommerce-frontend:${{ steps.version.outputs.version }}
     
-    - name: Update and Apply Deployment
+    - name: Update Kubernetes Manifest and Commit to Git (GitOps)
       run: |
+        # Update the image tag in the manifest
         sed -i "s#ghcr.io/felixopk/ecommerce-frontend:.*#ghcr.io/felixopk/ecommerce-frontend:${{ steps.version.outputs.version }}#g" kubernetes/frontend-deployment.yaml
-        kubectl apply -f kubernetes/frontend-deployment.yaml
-        echo "✅ Deployed frontend:${{ steps.version.outputs.version }} to cluster"
+        
+        # Configure Git
+        git config user.name "GitHub Actions Bot"
+        git config user.email "actions@github.com"
+        
+        # Check if there are changes
+        if git diff --quiet kubernetes/frontend-deployment.yaml; then
+          echo "No changes to manifest"
+        else
+          # Commit and push the change
+          git add kubernetes/frontend-deployment.yaml
+          git commit -m "chore: update frontend image to ${{ steps.version.outputs.version }}"
+          git push origin main
+          echo "✅ Updated manifest in Git - ArgoCD will deploy automatically"
+        fi
