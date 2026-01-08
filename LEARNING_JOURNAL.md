@@ -482,7 +482,7 @@ This is crucial for German companies running on-premises infrastructure like Sie
 
 ---
 
-#### "Explain your troubleshooting methodology"
+#### "My troubleshooting methodology"
 
 "I follow a systematic approach, working through the networking layers:
 
