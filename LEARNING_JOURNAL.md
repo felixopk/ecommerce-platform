@@ -608,3 +608,165 @@ I can now confidently discuss:
 *Total Time Invested: ~28 hours*
 *Production-Ready Systems: GitOps ✅ | Networking ✅ | Monitoring ⏳*
 Debugged and resolved a CI/CD pipeline issue where frontend deployments were incorrectly tagged with backend image names. Used git revert to safely rollback changes, implemented GitOps best practices with automatic manifest commits, and established consistent tag-based release workflows for multiple microservices.
+# Production Alerting Strategy
+
+## Overview
+Proactive monitoring with alerts configured to catch issues before they cause outages.
+
+## Critical Alerts (Immediate Action Required)
+
+### 1. Disk Space Critical
+**Threshold:** Disk usage > 85%  
+**Severity:** Critical  
+**Impact:** System crash when disk reaches 100%  
+**Action:**
+- Clean up old logs: `kubectl logs` and container logs
+- Expand disk or add volume
+- Check for log rotation issues
+
+**PromQL Query:**
+```promql
+max(100 - ((node_filesystem_avail_bytes{mountpoint="/"} * 100) / node_filesystem_size_bytes{mountpoint="/"}))
+```
+
+**Current status:** 50.5% (healthy)
+
+---
+
+### 2. Low Memory Warning
+**Threshold:** Available memory < 10%  
+**Severity:** Critical  
+**Impact:** OOMKiller starts terminating pods  
+**Action:**
+- Identify memory-heavy pods
+- Scale down non-critical services
+- Restart pods with memory leaks
+
+**PromQL Query:**
+```promql
+(node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100
+```
+
+---
+
+### 3. Pod Restart Detected
+**Threshold:** Any pod restart  
+**Severity:** Warning  
+**Impact:** Service disruption, potential data loss  
+**Action:**
+- Check pod logs: `kubectl logs -n ecommerce <pod-name> --previous`
+- Check for OOMKilled: `kubectl describe pod -n ecommerce <pod-name>`
+- Review recent deployments
+
+**PromQL Query:**
+```promql
+increase(kube_pod_container_status_restarts_total{namespace="ecommerce"}[5m]) > 0
+```
+
+---
+
+### 4. High Error Rate
+**Threshold:** Error rate > 1%  
+**Severity:** Critical  
+**Impact:** User-facing errors, poor experience  
+**Action:**
+- Check application logs
+- Verify database connectivity
+- Check recent deployments
+- Consider rollback
+
+**PromQL Query:**
+```promql
+(rate(http_requests_total{code=~"5..",namespace="ecommerce"}[5m]) / rate(http_requests_total{namespace="ecommerce"}[5m])) * 100
+```
+
+**Current status:** 0% (all requests successful)
+
+---
+
+## Warning Alerts (Monitor Closely)
+
+### 5. High P99 Latency
+**Threshold:** P99 latency > 500ms  
+**Severity:** Warning  
+**Impact:** Slow user experience  
+**Action:**
+- Check resource usage (CPU, memory)
+- Review database query performance
+- Check for network issues
+
+**PromQL Query:**
+```promql
+histogram_quantile(0.99, rate(http_request_duration_seconds_bucket{namespace="ecommerce"}[5m]))
+```
+
+---
+
+### 6. Pod CPU Throttling
+**Threshold:** CPU usage > 80% of limit  
+**Severity:** Warning  
+**Impact:** Degraded performance  
+**Action:**
+- Increase CPU limits
+- Scale horizontally (more replicas)
+- Optimize application code
+
+**PromQL Query:**
+```promql
+sum(rate(container_cpu_usage_seconds_total{namespace="ecommerce"}[5m])) by (pod) / sum(container_spec_cpu_quota{namespace="ecommerce"} / container_spec_cpu_period{namespace="ecommerce"}) by (pod) * 100
+```
+
+---
+
+## Alert Routing Configuration
+
+### Severity Levels
+- **Critical:** Immediate action required → Email + Slack + PagerDuty
+- **Warning:** Monitor and plan action → Slack only
+- **Info:** Informational only → Dashboard
+
+### Response Times (SLA)
+- **Critical:** Response within 15 minutes
+- **Warning:** Response within 1 hour
+- **Info:** Next business day
+
+### On-Call Rotation
+- Primary: DevOps engineer on duty
+- Secondary: Platform team lead
+- Escalation: Engineering manager
+
+---
+
+## Alert Validation
+
+### Current Alert Status
+All systems nominal:
+- ✅ Disk usage: 50.5% (threshold: 85%)
+- ✅ Memory: Healthy
+- ✅ Error rate: 0%
+- ✅ All pods running
+- ✅ No restarts in last 24 hours
+
+### Testing Alerts
+Alerts tested by:
+1. Manually triggering conditions in test environment
+2. Verifying notification delivery
+3. Documenting runbook effectiveness
+4. Regular alert review (monthly)
+
+---
+
+## Monitoring Stack
+- **Metrics:** Prometheus
+- **Visualization:** Grafana
+- **Alerting:** Grafana Alerting + AlertManager
+- **Notifications:** Email, Slack, PagerDuty (production)
+
+---
+
+## Future Enhancements
+- [ ] Add database-specific alerts (connection pool exhaustion)
+- [ ] Implement SLO-based alerting
+- [ ] Add predictive alerts (trend analysis)
+- [ ] Integrate with incident management system
+- [ ] Add automated remediation for common issues
