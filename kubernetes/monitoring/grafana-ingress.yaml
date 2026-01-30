@@ -1,12 +1,19 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: grafana
+  name: grafana-ingress
   namespace: monitoring
+  annotations:
+    cert-manager.io/cluster-issuer: selfsigned-issuer
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
 spec:
   ingressClassName: nginx
+  tls:
+  - hosts:
+    - grafana.opkcloudz.com
+    secretName: grafana-tls-secret
   rules:
-  - host: grafana.ecommerce.local
+  - host: grafana.opkcloudz.com
     http:
       paths:
       - path: /

@@ -1,25 +1,32 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  namespace: ecommerce
   name: ecommerce-ingress
+  namespace: ecommerce
+  annotations:
+    cert-manager.io/cluster-issuer: selfsigned-issuer
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
 spec:
   ingressClassName: nginx
+  tls:
+  - hosts:
+    - ecommerce.opkcloudz.com
+    secretName: ecommerce-tls-secret
   rules:
-    - host: ecommerce.local
-      http:
-        paths:
-          - path: /api
-            pathType: Prefix
-            backend:
-              service:
-                name: ecommerce-backend
-                port:
-                  number: 3000
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: ecommerce-frontend
-                port:
-                  number: 80
+  - host: ecommerce.opkcloudz.com
+    http:
+      paths:
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: ecommerce-backend
+            port:
+              number: 3000
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: ecommerce-frontend
+            port:
+              number: 80
